@@ -142,3 +142,36 @@ export async function getUserBinding(telegramId: bigint): Promise<{
     githubAccessToken: user.githubAccessToken,
   };
 }
+
+// 解绑用户
+export async function unbindUser(telegramId: bigint): Promise<boolean> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { telegramId },
+    });
+    
+    if (!user) {
+      return false;
+    }
+    
+    // 删除用户的所有订阅
+    await prisma.chatSubscription.deleteMany({
+      where: { createdById: user.id },
+    });
+    
+    // 清除用户的 GitHub 绑定信息
+    await prisma.user.update({
+      where: { telegramId },
+      data: {
+        githubId: null,
+        githubUsername: null,
+        githubAccessToken: null,
+      },
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to unbind user:', error);
+    return false;
+  }
+}

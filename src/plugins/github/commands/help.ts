@@ -8,6 +8,9 @@ export async function handleHelpCommand(ctx: Context): Promise<void> {
 <b>/bind</b> - 绑定 GitHub 账户
   首次使用需要绑定您的 GitHub 账户
 
+<b>/unbind</b> - 解绑 GitHub 账户
+  解除 GitHub 账户绑定，同时清除所有订阅
+
 <b>/subscribe <owner/repo> <events></b> - 订阅仓库事件
   订阅指定仓库的更新通知
   事件类型: commit, issue, pr (多个用逗号分隔)

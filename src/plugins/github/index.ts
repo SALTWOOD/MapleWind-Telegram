@@ -1,5 +1,5 @@
 import type { Plugin, PluginContext } from '../../core/plugin-interface.js';
-import { handleBindCommand } from './commands/bind.js';
+import { handleBindCommand, handleUnbindCommand } from './commands/bind.js';
 import { handleSubscribeCommand, handleUnsubscribeCommand, handleListCommand } from './commands/subscribe.js';
 import { handleHelpCommand, handleStartCommand } from './commands/help.js';
 import { setupWebhooks } from './webhooks.js';
@@ -45,6 +45,11 @@ export const githubPlugin: Plugin = {
       command: 'bind',
       description: '绑定 GitHub 账户',
       handler: handleBindCommand,
+    },
+    {
+      command: 'unbind',
+      description: '解绑 GitHub 账户',
+      handler: handleUnbindCommand,
     },
     {
       command: 'subscribe',
