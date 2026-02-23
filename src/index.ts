@@ -1,40 +1,55 @@
 import 'dotenv/config';
 import bot from './bot/index.js';
-import { startServer } from './web/server.js';
+import { startServer, getApp } from './web/server.js';
 import prisma from './database/client.js';
 import config from './config/index.js';
+import { pluginManager } from './core/plugin-manager.js';
+import { githubPlugin } from './plugins/index.js';
+import { logger } from './core/logger.js';
 
 async function main() {
-  console.log('🚀 Starting GitHub Bot...');
+  logger.info('Starting GitHub Bot...');
   
   // 测试数据库连接
   try {
     await prisma.$connect();
-    console.log('✅ Database connected');
+    logger.info('Database connected');
   } catch (error) {
-    console.error('❌ Failed to connect to database:', error);
+    logger.error('Failed to connect to database:', error);
     process.exit(1);
   }
   
   // 启动 Web 服务器
   startServer();
   
+  // 获取 app 实例
+  const app = getApp();
+  
+  // 设置插件管理器的 Bot 和 App 实例
+  pluginManager.setInstances(bot, app);
+  
+  // 注册插件
+  pluginManager.register(githubPlugin);
+  
+  // 启用所有插件
+  await pluginManager.enableAll();
+  
   // 启动 Bot
   try {
     await bot.start();
-    console.log('🤖 Telegram Bot started');
-    console.log(`Bot username: @${bot.botInfo.username}`);
+    logger.info('Telegram Bot started');
+    logger.info(`Bot username: @${bot.botInfo.username}`);
   } catch (error) {
-    console.error('❌ Failed to start bot:', error);
+    logger.error('Failed to start bot:', error);
     process.exit(1);
   }
   
   // 优雅关闭
   const shutdown = async () => {
-    console.log('\n🛑 Shutting down...');
+    logger.info('Shutting down...');
     await bot.stop();
     await prisma.$disconnect();
-    console.log('👋 Goodbye!');
+    logger.info('Goodbye!');
     process.exit(0);
   };
   
@@ -43,6 +58,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('Fatal error:', error);
+  logger.error('Fatal error:', error);
   process.exit(1);
 });

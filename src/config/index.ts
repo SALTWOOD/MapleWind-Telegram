@@ -1,8 +1,21 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 
 // 加载 .env 文件
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+
+export interface SslConfig {
+  enabled: boolean;
+  certPath: string;
+  keyPath: string;
+  cert?: string;
+  key?: string;
+}
+
+export interface PluginConfig {
+  enabled: string[];
+}
 
 export interface Config {
   telegram: {
@@ -27,6 +40,8 @@ export interface Config {
   server: {
     url: string;
   };
+  ssl: SslConfig;
+  plugins: PluginConfig;
 }
 
 function getEnv(key: string, required: boolean = true): string {
@@ -52,6 +67,38 @@ function getEnvNumber(key: string, defaultValue?: number): number {
   return num;
 }
 
+function getEnvBool(key: string, defaultValue: boolean = false): boolean {
+  const value = process.env[key];
+  if (!value) {
+    return defaultValue;
+  }
+  return value.toLowerCase() === 'true' || value === '1';
+}
+
+function loadSslConfig(): SslConfig {
+  const enabled = getEnvBool('SSL_ENABLED', false);
+  const certPath = getEnv('SSL_CERT_PATH', false);
+  const keyPath = getEnv('SSL_KEY_PATH', false);
+  
+  const sslConfig: SslConfig = {
+    enabled,
+    certPath,
+    keyPath,
+  };
+  
+  if (enabled && certPath && keyPath) {
+    try {
+      sslConfig.cert = fs.readFileSync(certPath, 'utf8');
+      sslConfig.key = fs.readFileSync(keyPath, 'utf8');
+    } catch (error) {
+      console.error('Failed to load SSL certificates:', error);
+      sslConfig.enabled = false;
+    }
+  }
+  
+  return sslConfig;
+}
+
 export const config: Config = {
   telegram: {
     botToken: getEnv('TELEGRAM_BOT_TOKEN'),
@@ -74,6 +121,13 @@ export const config: Config = {
   },
   server: {
     url: getEnv('SERVER_URL'),
+  },
+  ssl: loadSslConfig(),
+  plugins: {
+    enabled: getEnv('ENABLED_PLUGINS', false)
+      .split(',')
+      .map(p => p.trim())
+      .filter(p => p.length > 0),
   },
 };
 

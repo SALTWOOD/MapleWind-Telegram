@@ -8,6 +8,8 @@
 - 📬 **仓库订阅**：订阅仓库的 commit、issue、pull request 事件
 - 📢 **群聊支持**：支持在群聊中订阅，只有管理员可以执行订阅命令
 - 🔔 **实时通知**：通过 GitHub Webhooks 接收事件并推送通知
+- 🔌 **插件系统**：核心功能插件化，支持自定义插件扩展
+- 🔒 **SSL 支持**：可选的 HTTPS 支持
 
 ## 快速开始
 
@@ -87,6 +89,17 @@ DATABASE_URL=postgresql://user:password@localhost:5432/github_bot
 
 # Server
 SERVER_URL=http://your-domain
+
+# SSL (可选)
+SSL_ENABLED=false
+SSL_CERT_PATH=/path/to/cert.pem
+SSL_KEY_PATH=/path/to/key.pem
+
+# Plugins (逗号分隔的插件名称列表)
+ENABLED_PLUGINS=github
+
+# Debug
+DEBUG=false
 ```
 
 ### 6. 初始化数据库
@@ -137,6 +150,77 @@ npm start
 2. **订阅仓库**：发送 `/subscribe owner/repo commit,issue,pr` 订阅感兴趣的仓库和事件
 3. **接收通知**：当仓库有更新时，Bot 会自动推送通知到订阅的聊天
 
+## 插件系统
+
+### 架构
+
+Bot 采用插件化架构，核心功能（GitHub 通知）作为插件实现。你可以创建自己的插件来扩展 Bot 的功能。
+
+### 插件接口
+
+```typescript
+interface Plugin {
+  meta: {
+    name: string;
+    version: string;
+    description: string;
+    author?: string;
+  };
+  
+  onLoad?(context: PluginContext): Promise<void>;
+  onEnable?(context: PluginContext): Promise<void>;
+  onDisable?(context: PluginContext): Promise<void>;
+  
+  commands?: PluginCommand[];
+  routes?: PluginRoute[];
+}
+```
+
+### 创建自定义插件
+
+```typescript
+// src/plugins/my-plugin/index.ts
+import { Plugin, PluginContext } from '../../core/plugin-interface.js';
+import { Context } from 'grammy';
+
+export const myPlugin: Plugin = {
+  meta: {
+    name: 'my-plugin',
+    version: '1.0.0',
+    description: 'My custom plugin',
+  },
+  
+  async onEnable(context: PluginContext) {
+    context.logger.info('My plugin enabled');
+  },
+  
+  commands: [
+    {
+      command: 'hello',
+      description: 'Say hello',
+      handler: async (ctx: Context) => {
+        await ctx.reply('Hello!');
+      },
+    },
+  ],
+};
+```
+
+### 注册插件
+
+在 `src/plugins/index.ts` 中导出你的插件：
+
+```typescript
+export { myPlugin } from './my-plugin/index.js';
+```
+
+然后在 `src/index.ts` 中注册：
+
+```typescript
+import { myPlugin } from './plugins/index.js';
+pluginManager.register(myPlugin);
+```
+
 ## 项目结构
 
 ```
@@ -144,29 +228,32 @@ GitHubBot/
 ├── src/
 │   ├── index.ts                 # 应用入口
 │   ├── config/                  # 配置加载
+│   ├── core/                    # 核心模块
+│   │   ├── plugin-interface.ts  # 插件接口
+│   │   ├── plugin-manager.ts    # 插件管理器
+│   │   └── logger.ts            # 日志模块
+│   ├── plugins/                 # 插件目录
+│   │   └── github/              # GitHub 插件
+│   │       ├── index.ts         # 插件入口
+│   │       ├── commands/        # 命令
+│   │       ├── routes.ts        # 路由
+│   │       └── webhooks.ts      # Webhook 处理
 │   ├── database/                # 数据库连接
-│   ├── bot/                     # Telegram Bot
-│   │   ├── commands/            # 命令处理
-│   │   └── index.ts             # Bot 入口
-│   ├── github/                  # GitHub 集成
-│   │   ├── oauth.ts             # OAuth 处理
-│   │   ├── webhooks.ts          # Webhook 处理
-│   │   ├── installation.ts      # Installation 管理
-│   │   └── permissions.ts       # 权限验证
+│   ├── bot/                     # Telegram Bot 核心
+│   ├── github/                  # GitHub 服务
 │   ├── services/                # 业务服务
-│   │   ├── notification.ts      # 通知服务
-│   │   └── subscription.ts      # 订阅服务
 │   ├── web/                     # Web 服务器
-│   │   ├── server.ts            # Hono 服务器
-│   │   └── routes/              # 路由
 │   └── types/                   # 类型定义
 ├── prisma/
 │   └── schema.prisma            # 数据库 Schema
 ├── plans/
-│   └── architecture.md          # 架构设计文档
+│   ├── architecture.md          # 架构设计文档
+│   └── plugin-system.md         # 插件系统设计文档
 ├── .env.example                 # 环境变量示例
 ├── package.json
 ├── tsconfig.json
+├── Dockerfile
+├── docker-compose.dev.yml
 └── README.md
 ```
 
@@ -191,11 +278,22 @@ docker-compose -f docker-compose.dev.yml down
 - **app**: GitHub Bot 应用（端口 3000）
 - **db**: PostgreSQL 数据库（端口 5432）
 
-### 注意事项
+### SSL 配置
+
+启用 HTTPS：
+
+```env
+SSL_ENABLED=true
+SSL_CERT_PATH=/path/to/cert.pem
+SSL_KEY_PATH=/path/to/key.pem
+```
+
+## 注意事项
 
 1. 确保服务器可以被 GitHub 访问（用于接收 Webhooks）
-2. 配置 HTTPS（GitHub Webhooks 需要）
+2. 配置 HTTPS（GitHub Webhooks 需要，或使用 SSL 配置）
 3. 定期备份数据库
+4. 群聊中只有管理员可以执行订阅命令
 
 ## License
 

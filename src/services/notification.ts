@@ -1,10 +1,12 @@
-import { Bot } from 'grammy';
+import { Bot, Context } from 'grammy';
 import { PushPayload, IssuePayload, PullRequestPayload } from '../types/index.js';
 
-let bot: Bot | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let bot: Bot<any> | null = null;
 
 // 初始化通知服务
-export function initNotificationService(botInstance: Bot): void {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function initNotificationService(botInstance: Bot<any>): void {
   bot = botInstance;
 }
 
