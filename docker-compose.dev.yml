@@ -1,0 +1,46 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: github-bot
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/github_bot
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - github-bot-network
+
+  db:
+    image: postgres:16-alpine
+    container_name: github-bot-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: github_bot
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d github_bot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - github-bot-network
+
+volumes:
+  postgres_data:
+
+networks:
+  github-bot-network:
+    driver: bridge

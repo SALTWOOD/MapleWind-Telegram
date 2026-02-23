@@ -174,23 +174,22 @@ GitHubBot/
 
 ### Docker 部署
 
-```dockerfile
-FROM node:18-alpine
+使用 Docker Compose 一键启动：
 
-WORKDIR /app
+```bash
+# 构建并启动
+docker-compose -f docker-compose.dev.yml up -d --build
 
-COPY package*.json ./
-RUN npm ci --only=production
+# 查看日志
+docker-compose -f docker-compose.dev.yml logs -f
 
-COPY prisma ./prisma/
-RUN npx prisma generate
-
-COPY dist ./dist/
-
-EXPOSE 3000
-
-CMD ["node", "dist/index.js"]
+# 停止服务
+docker-compose -f docker-compose.dev.yml down
 ```
+
+服务包含：
+- **app**: GitHub Bot 应用（端口 3000）
+- **db**: PostgreSQL 数据库（端口 5432）
 
 ### 注意事项
 
