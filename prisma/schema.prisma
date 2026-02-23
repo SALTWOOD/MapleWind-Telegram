@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户表 - 存储 Telegram 用户与 GitHub 账户的绑定信息
+model User {
+  id                  BigInt   @id @default(autoincrement())
+  telegramId          BigInt   @unique
+  githubId            String?
+  githubUsername      String?
+  githubAccessToken   String?  // 加密存储
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  subscriptions       ChatSubscription[]
+
+  @@map("users")
+}
+
+// 聊天订阅表 - 存储群聊/私聊对仓库的订阅信息
+model ChatSubscription {
+  id                  BigInt   @id @default(autoincrement())
+  telegramChatId      BigInt
+  chatType            String   // private, group, supergroup
+  repoOwner           String
+  repoName            String
+  repoGithubId        BigInt?
+  subscribeCommit     Boolean  @default(false)
+  subscribeIssue      Boolean  @default(false)
+  subscribePr         Boolean  @default(false)
+  createdById         BigInt
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  createdBy           User     @relation(fields: [createdById], references: [id])
+
+  @@unique([telegramChatId, repoOwner, repoName])
+  @@map("chat_subscriptions")
+}
+
+// GitHub App 安装表 - 存储 GitHub App 的安装信息
+model GithubInstallation {
+  id              BigInt   @id @default(autoincrement())
+  installationId  BigInt   @unique
+  accountLogin    String
+  accountId       BigInt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("github_installations")
+}
+
+// OAuth State 表 - 存储 OAuth 流程中的 state 参数
+model OAuthState {
+  id              BigInt   @id @default(autoincrement())
+  state           String   @unique
+  telegramId      BigInt
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime
+
+  @@map("oauth_states")
+}
